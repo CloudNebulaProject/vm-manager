@@ -1,0 +1,37 @@
+[workspace]
+resolver = "3"
+members = ["crates/vm-manager", "crates/vmctl"]
+
+[workspace.package]
+edition = "2024"
+license = "MPL-2.0"
+rust-version = "1.85"
+
+[workspace.dependencies]
+tokio = { version = "1", features = [
+    "rt-multi-thread",
+    "macros",
+    "signal",
+    "fs",
+    "io-util",
+    "io-std",
+    "process",
+    "net",
+    "time",
+] }
+miette = { version = "7", features = ["fancy"] }
+thiserror = "2"
+clap = { version = "4", features = ["derive", "env"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = [
+    "rustls-tls-native-roots",
+    "stream",
+] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+tempfile = "3"
+futures-util = "0.3"
+zstd = "0.13"
+dirs = "6"

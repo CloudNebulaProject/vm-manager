@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+
+<!--
+  nebula-vm zone brand platform configuration.
+
+  Grants the zone access to bhyve/propolis device nodes and standard filesystems.
+-->
+
+<!DOCTYPE platform PUBLIC "-//Sun Microsystems Inc//DTD Zones Platform//EN"
+    "file:///usr/share/lib/xml/dtd/zone_platform.dtd.1">
+
+<platform name="nebula-vm" allow-exclusive-ip="true">
+
+  <!-- Standard filesystem mounts -->
+  <global_mount special="/dev" directory="/dev" type="dev"
+    opt="attrdir=%R/root/dev" />
+  <global_mount special="proc" directory="/proc" type="proc"
+    opt="zone=%z" />
+  <global_mount special="ctfs" directory="/system/contract" type="ctfs" />
+  <global_mount special="mnttab" directory="/etc/mnttab" type="mntfs" />
+  <global_mount special="objfs" directory="/system/object" type="objfs" />
+  <global_mount special="swap" directory="/tmp" type="tmpfs" />
+  <global_mount special="sharefs" directory="/etc/dfs/sharetab" type="sharefs" />
+
+  <!-- bhyve / propolis device access -->
+  <device match="vmm/*" />
+  <device match="viona" />
+  <device match="zvol/dsk/*" />
+  <device match="zvol/rdsk/*" />
+  <device match="zfs" />
+  <device match="null" />
+  <device match="zero" />
+  <device match="random" />
+  <device match="urandom" />
+
+</platform>
