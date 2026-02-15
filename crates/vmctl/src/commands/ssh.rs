@@ -15,13 +15,17 @@ pub struct SshArgs {
     /// VM name
     name: String,
 
-    /// SSH user
-    #[arg(long, default_value = "vm")]
-    user: String,
+    /// SSH user (overrides VMFile ssh block)
+    #[arg(long)]
+    user: Option<String>,
 
     /// Path to SSH private key
     #[arg(long)]
     key: Option<PathBuf>,
+
+    /// Path to VMFile.kdl (for reading ssh user)
+    #[arg(long)]
+    file: Option<PathBuf>,
 }
 
 /// Find the first existing SSH key in the user's .ssh directory.
@@ -36,6 +40,14 @@ fn find_ssh_key() -> Option<PathBuf> {
         }
     }
     None
+}
+
+/// Try to read the ssh user from the VMFile for the given VM name.
+fn ssh_user_from_vmfile(vm_name: &str, explicit_file: Option<&std::path::Path>) -> Option<String> {
+    let path = vm_manager::vmfile::discover(explicit_file).ok()?;
+    let vmfile = vm_manager::vmfile::parse(&path).ok()?;
+    let def = vmfile.vms.iter().find(|d| d.name == vm_name)?;
+    Some(def.ssh.as_ref()?.user.clone())
 }
 
 pub async fn run(args: SshArgs) -> Result<()> {
@@ -53,6 +65,12 @@ pub async fn run(args: SshArgs) -> Result<()> {
         _ => 22,
     };
 
+    // Resolve user: CLI flag → VMFile → default "vm"
+    let user = args
+        .user
+        .or_else(|| ssh_user_from_vmfile(&args.name, args.file.as_deref()))
+        .unwrap_or_else(|| "vm".to_string());
+
     // Check for a generated key in the VM's work directory first, then user keys
     let generated_key = handle.work_dir.join(super::GENERATED_KEY_FILE);
     let key_path = args
@@ -67,13 +85,13 @@ pub async fn run(args: SshArgs) -> Result<()> {
         })?;
 
     let config = SshConfig {
-        user: args.user.clone(),
+        user: user.clone(),
         public_key: None,
         private_key_path: Some(key_path),
         private_key_pem: None,
     };
 
-    println!("Connecting to {}@{}:{}...", args.user, ip, port);
+    println!("Connecting to {user}@{ip}:{port}...");
 
     let sess = vm_manager::ssh::connect_with_retry(&ip, port, &config, Duration::from_secs(30))
         .await
@@ -99,7 +117,7 @@ pub async fn run(args: SshArgs) -> Result<()> {
         cmd.arg("-i").arg(key);
     }
 
-    cmd.arg(format!("{}@{}", args.user, ip));
+    cmd.arg(format!("{user}@{ip}"));
 
     let status = cmd.status().await.into_diagnostic()?;
 

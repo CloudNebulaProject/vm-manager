@@ -216,9 +216,15 @@ impl Hypervisor for QemuBackend {
             // QMP socket
             "-qmp".into(),
             format!("unix:{},server,nowait", qmp_sock.display()),
-            // Serial console socket
+            // Serial console: Unix socket (interactive) + log file for post-mortem review
+            "-chardev".into(),
+            format!(
+                "socket,id=serial0,path={},server=on,wait=off,logfile={}",
+                console_sock.display(),
+                vm.work_dir.join("console.log").display(),
+            ),
             "-serial".into(),
-            format!("unix:{},server,nowait", console_sock.display()),
+            "chardev:serial0".into(),
             // VNC on localhost with auto-port
             "-vnc".into(),
             "127.0.0.1:0".into(),

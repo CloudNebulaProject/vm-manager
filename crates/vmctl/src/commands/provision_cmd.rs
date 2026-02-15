@@ -73,8 +73,15 @@ pub async fn run(args: ProvisionArgs) -> Result<()> {
         let provisions = def.provisions.clone();
         let base_dir = vmfile.base_dir.clone();
         let name = def.name.clone();
+        let log_dir = handle.work_dir.clone();
         tokio::task::spawn_blocking(move || {
-            vm_manager::provision::run_provisions(&sess, &provisions, &base_dir, &name)
+            vm_manager::provision::run_provisions(
+                &sess,
+                &provisions,
+                &base_dir,
+                &name,
+                Some(&log_dir),
+            )
         })
         .await
         .into_diagnostic()?

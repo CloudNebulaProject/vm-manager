@@ -4,6 +4,7 @@ pub mod destroy;
 pub mod down;
 pub mod image;
 pub mod list;
+pub mod log;
 pub mod provision_cmd;
 pub mod reload;
 pub mod ssh;
@@ -56,6 +57,8 @@ enum Command {
     Reload(reload::ReloadArgs),
     /// Re-run provisioners on running VMs from VMFile.kdl
     Provision(provision_cmd::ProvisionArgs),
+    /// Show VM console and provision logs
+    Log(log::LogArgs),
 }
 
 impl Cli {
@@ -76,6 +79,7 @@ impl Cli {
             Command::Down(args) => down::run(args).await,
             Command::Reload(args) => reload::run(args).await,
             Command::Provision(args) => provision_cmd::run(args).await,
+            Command::Log(args) => log::run(args).await,
         }
     }
 }
