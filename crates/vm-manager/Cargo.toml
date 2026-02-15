@@ -27,6 +27,9 @@ kdl.workspace = true
 # Optional pure-Rust ISO generation
 isobemak = { version = "0.2", optional = true }
 
+# OCI
+oci-client.workspace = true
+
 # SSH
 ssh2 = "0.9"
 ssh-key.workspace = true

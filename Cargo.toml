@@ -37,3 +37,4 @@ zstd = "0.13"
 dirs = "6"
 kdl = "6"
 ssh-key = { version = "0.6", features = ["ed25519", "rand_core", "getrandom"] }
+oci-client = "0.15"

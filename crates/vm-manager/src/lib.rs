@@ -2,6 +2,7 @@ pub mod backends;
 pub mod cloudinit;
 pub mod error;
 pub mod image;
+pub mod oci;
 pub mod provision;
 pub mod ssh;
 pub mod traits;

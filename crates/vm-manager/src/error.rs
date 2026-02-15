@@ -157,6 +157,13 @@ pub enum VmError {
         detail: String,
     },
 
+    #[error("failed to pull OCI artifact {reference}: {detail}")]
+    #[diagnostic(
+        code(vm_manager::oci::pull_failed),
+        help("check that the OCI reference is correct and the registry is reachable. For ghcr.io, ensure GITHUB_TOKEN is set in the environment.")
+    )]
+    OciPullFailed { reference: String, detail: String },
+
     #[error(transparent)]
     #[diagnostic(code(vm_manager::io))]
     Io(#[from] std::io::Error),

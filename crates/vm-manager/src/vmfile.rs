@@ -41,6 +41,7 @@ pub struct VmDef {
 pub enum ImageSource {
     Local(String),
     Url(String),
+    Oci(String),
 }
 
 /// Network mode as declared in the VMFile.
@@ -229,6 +230,7 @@ fn parse_vm_def(name: &str, doc: &KdlDocument) -> Result<VmDef> {
 
     let image = match (local_image, url_image) {
         (Some(path), None) => ImageSource::Local(path),
+        (None, Some(url)) if url.starts_with("oci://") => ImageSource::Oci(url[6..].to_string()),
         (None, Some(url)) => ImageSource::Url(url),
         (Some(_), Some(_)) => {
             return Err(VmError::VmFileValidation {
@@ -450,6 +452,10 @@ pub async fn resolve(def: &VmDef, base_dir: &Path) -> Result<VmSpec> {
             info!(vm = %def.name, url = %url, "downloading image");
             let mgr = ImageManager::new();
             mgr.pull(url, Some(&def.name)).await?
+        }
+        ImageSource::Oci(oci_ref) => {
+            let mgr = ImageManager::new();
+            mgr.pull_oci(oci_ref, Some(&def.name)).await?
         }
     };
 
@@ -778,6 +784,22 @@ vm "dup" {
         let err = parse(tmp.path()).unwrap_err();
         let msg = err.to_string();
         assert!(msg.contains("duplicate"), "got: {msg}");
+    }
+
+    #[test]
+    fn parse_oci_image_source() {
+        let kdl = r#"
+vm "ci" {
+    image-url "oci://ghcr.io/cloudnebulaproject/ubuntu-rust:latest"
+}
+"#;
+        let tmp = tempfile::NamedTempFile::with_suffix(".kdl").unwrap();
+        std::fs::write(tmp.path(), kdl).unwrap();
+
+        let vmfile = parse(tmp.path()).unwrap();
+        assert!(
+            matches!(vmfile.vms[0].image, ImageSource::Oci(ref r) if r == "ghcr.io/cloudnebulaproject/ubuntu-rust:latest")
+        );
     }
 
     #[test]

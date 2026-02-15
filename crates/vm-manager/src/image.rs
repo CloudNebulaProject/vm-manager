@@ -64,6 +64,30 @@ impl ImageManager {
         }
     }
 
+    /// Pull a QCOW2 image from an OCI registry into the cache directory.
+    pub async fn pull_oci(&self, reference: &str, name: Option<&str>) -> Result<PathBuf> {
+        let file_name = name
+            .map(|n| format!("{n}.qcow2"))
+            .unwrap_or_else(|| {
+                let sanitized = reference.replace('/', "_").replace(':', "_");
+                format!("{sanitized}.qcow2")
+            });
+        let dest = self.cache.join(&file_name);
+        if dest.exists() {
+            info!(reference, dest = %dest.display(), "OCI image already cached; skipping pull");
+            return Ok(dest);
+        }
+
+        if let Some(parent) = dest.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+
+        let data = crate::oci::pull_qcow2(reference).await?;
+        tokio::fs::write(&dest, &data).await?;
+        info!(reference, dest = %dest.display(), "OCI artifact cached");
+        Ok(dest)
+    }
+
     /// Pull an image from a URL into the cache directory, returning the cached path.
     pub async fn pull(&self, url: &str, name: Option<&str>) -> Result<PathBuf> {
         let file_name = name.map(|n| n.to_string()).unwrap_or_else(|| {
