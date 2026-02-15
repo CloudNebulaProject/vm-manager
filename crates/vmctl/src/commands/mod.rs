@@ -97,16 +97,23 @@ fn ssh_port_for_handle(handle: &VmHandle) -> u16 {
 const GENERATED_KEY_FILE: &str = "id_ed25519_generated";
 
 /// Persist a generated SSH private key PEM to the VM's work directory (if present).
+///
+/// The file is written with 0600 permissions so that OpenSSH accepts it.
 async fn save_generated_ssh_key(
     spec: &vm_manager::VmSpec,
     handle: &VmHandle,
 ) -> miette::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
     if let Some(ref ssh) = spec.ssh {
         if let Some(ref pem) = ssh.private_key_pem {
             let key_path = handle.work_dir.join(GENERATED_KEY_FILE);
             tokio::fs::write(&key_path, pem)
                 .await
                 .map_err(|e| miette::miette!("failed to save generated SSH key: {e}"))?;
+            tokio::fs::set_permissions(&key_path, std::fs::Permissions::from_mode(0o600))
+                .await
+                .map_err(|e| miette::miette!("failed to set SSH key permissions: {e}"))?;
         }
     }
     Ok(())

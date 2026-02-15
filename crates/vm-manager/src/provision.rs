@@ -11,8 +11,8 @@ use crate::vmfile::{FileProvision, ProvisionDef, ShellProvision, resolve_path};
 
 /// Run all provision steps on an established SSH session.
 ///
-/// If `log_dir` is provided, all stdout/stderr from provision steps is appended to
-/// `provision.log` in that directory.
+/// Output from shell provisioners is streamed to stdout/stderr in real time.
+/// If `log_dir` is provided, output is also appended to `provision.log`.
 pub fn run_provisions(
     sess: &Session,
     provisions: &[ProvisionDef],
@@ -32,16 +32,6 @@ pub fn run_provisions(
         }
     }
     Ok(())
-}
-
-/// Log provision output to tracing and optionally to a file.
-fn log_output(vm_name: &str, step: usize, label: &str, stdout: &str, stderr: &str) {
-    for line in stdout.lines() {
-        info!(vm = %vm_name, step, "[{label}:stdout] {line}");
-    }
-    for line in stderr.lines() {
-        info!(vm = %vm_name, step, "[{label}:stderr] {line}");
-    }
 }
 
 /// Append provision output to a log file in the given directory.
@@ -77,14 +67,19 @@ fn run_shell(
 ) -> Result<()> {
     if let Some(ref cmd) = shell.inline {
         info!(vm = %vm_name, step, cmd = %cmd, "running inline shell provision");
-        let (stdout, stderr, exit_code) =
-            ssh::exec(sess, cmd).map_err(|e| VmError::ProvisionFailed {
-                vm: vm_name.into(),
-                step,
-                detail: format!("shell exec: {e}"),
-            })?;
 
-        log_output(vm_name, step, cmd, &stdout, &stderr);
+        let (stdout, stderr, exit_code) = ssh::exec_streaming(
+            sess,
+            cmd,
+            std::io::stdout(),
+            std::io::stderr(),
+        )
+        .map_err(|e| VmError::ProvisionFailed {
+            vm: vm_name.into(),
+            step,
+            detail: format!("shell exec: {e}"),
+        })?;
+
         if let Some(dir) = log_dir {
             append_provision_log(dir, step, cmd, &stdout, &stderr);
         }
@@ -115,14 +110,18 @@ fn run_shell(
 
         // Make executable and run
         let run_cmd = format!("chmod +x {remote_path_str} && {remote_path_str}");
-        let (stdout, stderr, exit_code) =
-            ssh::exec(sess, &run_cmd).map_err(|e| VmError::ProvisionFailed {
-                vm: vm_name.into(),
-                step,
-                detail: format!("script exec: {e}"),
-            })?;
+        let (stdout, stderr, exit_code) = ssh::exec_streaming(
+            sess,
+            &run_cmd,
+            std::io::stdout(),
+            std::io::stderr(),
+        )
+        .map_err(|e| VmError::ProvisionFailed {
+            vm: vm_name.into(),
+            step,
+            detail: format!("script exec: {e}"),
+        })?;
 
-        log_output(vm_name, step, script_raw, &stdout, &stderr);
         if let Some(dir) = log_dir {
             append_provision_log(dir, step, script_raw, &stdout, &stderr);
         }

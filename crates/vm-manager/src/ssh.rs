@@ -91,6 +91,94 @@ pub fn exec(sess: &Session, cmd: &str) -> Result<(String, String, i32)> {
     Ok((stdout, stderr, exit_code))
 }
 
+/// Execute a command and stream stdout/stderr to the provided writers as data arrives.
+///
+/// Returns `(stdout_collected, stderr_collected, exit_code)`.
+pub fn exec_streaming<W1: std::io::Write, W2: std::io::Write>(
+    sess: &Session,
+    cmd: &str,
+    mut out: W1,
+    mut err: W2,
+) -> Result<(String, String, i32)> {
+    let mut channel = sess.channel_session().map_err(|e| VmError::SshFailed {
+        detail: format!("channel session: {e}"),
+    })?;
+
+    // Non-blocking mode so we can interleave stdout and stderr reads
+    sess.set_blocking(false);
+
+    channel.exec(cmd).map_err(|e| {
+        sess.set_blocking(true);
+        VmError::SshFailed {
+            detail: format!("exec '{cmd}': {e}"),
+        }
+    })?;
+
+    let mut stdout_buf = Vec::new();
+    let mut stderr_buf = Vec::new();
+    let mut buf = [0u8; 8192];
+
+    loop {
+        let mut progress = false;
+
+        // Read stdout
+        match channel.read(&mut buf) {
+            Ok(0) => {}
+            Ok(n) => {
+                let _ = out.write_all(&buf[..n]);
+                let _ = out.flush();
+                stdout_buf.extend_from_slice(&buf[..n]);
+                progress = true;
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
+            Err(e) => {
+                sess.set_blocking(true);
+                return Err(VmError::SshFailed {
+                    detail: format!("read stdout: {e}"),
+                });
+            }
+        }
+
+        // Read stderr
+        match channel.stderr().read(&mut buf) {
+            Ok(0) => {}
+            Ok(n) => {
+                let _ = err.write_all(&buf[..n]);
+                let _ = err.flush();
+                stderr_buf.extend_from_slice(&buf[..n]);
+                progress = true;
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
+            Err(e) => {
+                sess.set_blocking(true);
+                return Err(VmError::SshFailed {
+                    detail: format!("read stderr: {e}"),
+                });
+            }
+        }
+
+        if channel.eof() && !progress {
+            break;
+        }
+
+        if !progress {
+            std::thread::sleep(Duration::from_millis(50));
+        }
+    }
+
+    sess.set_blocking(true);
+
+    channel.wait_close().map_err(|e| VmError::SshFailed {
+        detail: format!("wait close: {e}"),
+    })?;
+    let exit_code = channel.exit_status().unwrap_or(1);
+
+    let stdout = String::from_utf8_lossy(&stdout_buf).into_owned();
+    let stderr = String::from_utf8_lossy(&stderr_buf).into_owned();
+
+    Ok((stdout, stderr, exit_code))
+}
+
 /// Upload a local file to a remote path via SFTP.
 pub fn upload(sess: &Session, local: &Path, remote: &Path) -> Result<()> {
     let sftp = sess.sftp().map_err(|e| VmError::SshFailed {
