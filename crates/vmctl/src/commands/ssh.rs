@@ -12,8 +12,8 @@ const SSH_KEY_NAMES: &[&str] = &["id_ed25519", "id_ecdsa", "id_rsa"];
 
 #[derive(Args)]
 pub struct SshArgs {
-    /// VM name
-    name: String,
+    /// VM name (inferred from VMFile.kdl if omitted and only one VM is defined)
+    name: Option<String>,
 
     /// SSH user (overrides VMFile ssh block)
     #[arg(long)]
@@ -42,19 +42,49 @@ fn find_ssh_key() -> Option<PathBuf> {
     None
 }
 
-/// Try to read the ssh user from the VMFile for the given VM name.
-fn ssh_user_from_vmfile(vm_name: &str, explicit_file: Option<&std::path::Path>) -> Option<String> {
+/// Try to parse the VMFile and return relevant info for the given VM name.
+struct VmFileInfo {
+    user: Option<String>,
+}
+
+fn lookup_vmfile(
+    vm_name: &str,
+    explicit_file: Option<&std::path::Path>,
+) -> Option<VmFileInfo> {
     let path = vm_manager::vmfile::discover(explicit_file).ok()?;
     let vmfile = vm_manager::vmfile::parse(&path).ok()?;
     let def = vmfile.vms.iter().find(|d| d.name == vm_name)?;
-    Some(def.ssh.as_ref()?.user.clone())
+    Some(VmFileInfo {
+        user: def.ssh.as_ref().map(|s| s.user.clone()),
+    })
+}
+
+/// Infer the default VM name from the VMFile when only one VM is defined.
+fn default_vm_name(explicit_file: Option<&std::path::Path>) -> Option<String> {
+    let path = vm_manager::vmfile::discover(explicit_file).ok()?;
+    let vmfile = vm_manager::vmfile::parse(&path).ok()?;
+    if vmfile.vms.len() == 1 {
+        Some(vmfile.vms[0].name.clone())
+    } else {
+        None
+    }
 }
 
 pub async fn run(args: SshArgs) -> Result<()> {
+    // Resolve VM name: CLI arg → infer from VMFile
+    let name = args
+        .name
+        .or_else(|| default_vm_name(args.file.as_deref()))
+        .ok_or_else(|| {
+            miette::miette!(
+                "no VM name provided and VMFile.kdl defines multiple VMs — specify one explicitly"
+            )
+        })?;
+
     let store = state::load_store().await?;
     let handle = store
-        .get(&args.name)
-        .ok_or_else(|| miette::miette!("VM '{}' not found", args.name))?;
+        .get(&name)
+        .ok_or_else(|| miette::miette!("VM '{name}' not found — run `vmctl up` first"))?;
 
     let hv = RouterHypervisor::new(None, None);
     let ip = hv.guest_ip(handle).await.into_diagnostic()?;
@@ -66,9 +96,10 @@ pub async fn run(args: SshArgs) -> Result<()> {
     };
 
     // Resolve user: CLI flag → VMFile → default "vm"
+    let vmfile_info = lookup_vmfile(&name, args.file.as_deref());
     let user = args
         .user
-        .or_else(|| ssh_user_from_vmfile(&args.name, args.file.as_deref()))
+        .or_else(|| vmfile_info.and_then(|i| i.user))
         .unwrap_or_else(|| "vm".to_string());
 
     // Check for a generated key in the VM's work directory first, then user keys

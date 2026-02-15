@@ -7,11 +7,13 @@ use commands::Cli;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing with RUST_LOG env filter (default: info)
+    // Initialize tracing: compact format, no timestamps, no targets
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
         )
+        .without_time()
+        .with_target(false)
         .init();
 
     let cli = Cli::parse();
