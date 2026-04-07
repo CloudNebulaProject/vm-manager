@@ -321,11 +321,13 @@ fn parse_vm_def(name: &str, doc: &KdlDocument) -> Result<VmDef> {
 
     // SSH
     let ssh = if let Some(ssh_node) = doc.get("ssh") {
-        let ssh_doc = ssh_node.children().ok_or_else(|| VmError::VmFileValidation {
-            vm: name.into(),
-            detail: "ssh block must have a body".into(),
-            hint: "add at least a user: ssh { user \"vm\" }".into(),
-        })?;
+        let ssh_doc = ssh_node
+            .children()
+            .ok_or_else(|| VmError::VmFileValidation {
+                vm: name.into(),
+                detail: "ssh block must have a body".into(),
+                hint: "add at least a user: ssh { user \"vm\" }".into(),
+            })?;
         let user = ssh_doc
             .get_arg("user")
             .and_then(|v| v.as_string())
@@ -493,17 +495,18 @@ fn generate_ssh_keypair(vm_name: &str) -> Result<(String, String)> {
         }
     })?;
 
-    let pub_openssh = sk.public_key().to_openssh().map_err(|e| {
-        VmError::SshKeygenFailed {
+    let pub_openssh = sk
+        .public_key()
+        .to_openssh()
+        .map_err(|e| VmError::SshKeygenFailed {
             detail: format!("serialize public key: {e}"),
-        }
-    })?;
+        })?;
 
-    let priv_pem = sk.to_openssh(LineEnding::LF).map_err(|e| {
-        VmError::SshKeygenFailed {
+    let priv_pem = sk
+        .to_openssh(LineEnding::LF)
+        .map_err(|e| VmError::SshKeygenFailed {
             detail: format!("serialize private key: {e}"),
-        }
-    })?;
+        })?;
 
     Ok((pub_openssh, priv_pem.to_string()))
 }
@@ -528,14 +531,13 @@ async fn resolve_cloud_init_and_ssh(
     if let Some(ci) = &def.cloud_init {
         if let Some(raw_path) = &ci.user_data {
             let p = resolve_path(raw_path, base_dir);
-            let data =
-                tokio::fs::read(&p)
-                    .await
-                    .map_err(|e| VmError::VmFileValidation {
-                        vm: def.name.clone(),
-                        detail: format!("cannot read user-data at {}: {e}", p.display()),
-                        hint: "check the user-data path".into(),
-                    })?;
+            let data = tokio::fs::read(&p)
+                .await
+                .map_err(|e| VmError::VmFileValidation {
+                    vm: def.name.clone(),
+                    detail: format!("cannot read user-data at {}: {e}", p.display()),
+                    hint: "check the user-data path".into(),
+                })?;
             let cloud_init = Some(CloudInitConfig {
                 user_data: data,
                 instance_id: Some(def.name.clone()),
@@ -551,14 +553,13 @@ async fn resolve_cloud_init_and_ssh(
     if let Some(ci) = &def.cloud_init {
         if let Some(key_raw) = &ci.ssh_key {
             let key_path = resolve_path(key_raw, base_dir);
-            let pubkey =
-                tokio::fs::read_to_string(&key_path)
-                    .await
-                    .map_err(|e| VmError::VmFileValidation {
-                        vm: def.name.clone(),
-                        detail: format!("cannot read ssh-key at {}: {e}", key_path.display()),
-                        hint: "check the ssh-key path".into(),
-                    })?;
+            let pubkey = tokio::fs::read_to_string(&key_path).await.map_err(|e| {
+                VmError::VmFileValidation {
+                    vm: def.name.clone(),
+                    detail: format!("cannot read ssh-key at {}: {e}", key_path.display()),
+                    hint: "check the ssh-key path".into(),
+                }
+            })?;
             let (user_data, _meta) =
                 build_cloud_config(ssh_user, pubkey.trim(), &def.name, hostname);
             let cloud_init = Some(CloudInitConfig {
@@ -576,8 +577,7 @@ async fn resolve_cloud_init_and_ssh(
         info!(vm = %def.name, "generating Ed25519 SSH keypair for cloud-init");
         let (pub_openssh, priv_pem) = generate_ssh_keypair(&def.name)?;
 
-        let (user_data, _meta) =
-            build_cloud_config(ssh_user, &pub_openssh, &def.name, hostname);
+        let (user_data, _meta) = build_cloud_config(ssh_user, &pub_openssh, &def.name, hostname);
         let cloud_init = Some(CloudInitConfig {
             user_data,
             instance_id: Some(def.name.clone()),

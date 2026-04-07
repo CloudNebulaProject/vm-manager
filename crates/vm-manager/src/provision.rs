@@ -68,17 +68,14 @@ fn run_shell(
     if let Some(ref cmd) = shell.inline {
         info!(vm = %vm_name, step, cmd = %cmd, "running inline shell provision");
 
-        let (stdout, stderr, exit_code) = ssh::exec_streaming(
-            sess,
-            cmd,
-            std::io::stdout(),
-            std::io::stderr(),
-        )
-        .map_err(|e| VmError::ProvisionFailed {
-            vm: vm_name.into(),
-            step,
-            detail: format!("shell exec: {e}"),
-        })?;
+        let (stdout, stderr, exit_code) =
+            ssh::exec_streaming(sess, cmd, std::io::stdout(), std::io::stderr()).map_err(|e| {
+                VmError::ProvisionFailed {
+                    vm: vm_name.into(),
+                    step,
+                    detail: format!("shell exec: {e}"),
+                }
+            })?;
 
         if let Some(dir) = log_dir {
             append_provision_log(dir, step, cmd, &stdout, &stderr);
@@ -110,17 +107,14 @@ fn run_shell(
 
         // Make executable and run
         let run_cmd = format!("chmod +x {remote_path_str} && {remote_path_str}");
-        let (stdout, stderr, exit_code) = ssh::exec_streaming(
-            sess,
-            &run_cmd,
-            std::io::stdout(),
-            std::io::stderr(),
-        )
-        .map_err(|e| VmError::ProvisionFailed {
-            vm: vm_name.into(),
-            step,
-            detail: format!("script exec: {e}"),
-        })?;
+        let (stdout, stderr, exit_code) =
+            ssh::exec_streaming(sess, &run_cmd, std::io::stdout(), std::io::stderr()).map_err(
+                |e| VmError::ProvisionFailed {
+                    vm: vm_name.into(),
+                    step,
+                    detail: format!("script exec: {e}"),
+                },
+            )?;
 
         if let Some(dir) = log_dir {
             append_provision_log(dir, step, script_raw, &stdout, &stderr);

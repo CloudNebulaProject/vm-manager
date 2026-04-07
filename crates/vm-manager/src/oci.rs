@@ -9,12 +9,13 @@ const QCOW2_LAYER_MEDIA_TYPE: &str = "application/vnd.cloudnebula.qcow2.layer.v1
 
 /// Pull a QCOW2 image stored as an OCI artifact from a registry.
 pub async fn pull_qcow2(reference_str: &str) -> Result<Vec<u8>> {
-    let reference: Reference = reference_str.parse().map_err(|e: oci_client::ParseError| {
-        VmError::OciPullFailed {
-            reference: reference_str.to_string(),
-            detail: format!("invalid OCI reference: {e}"),
-        }
-    })?;
+    let reference: Reference =
+        reference_str
+            .parse()
+            .map_err(|e: oci_client::ParseError| VmError::OciPullFailed {
+                reference: reference_str.to_string(),
+                detail: format!("invalid OCI reference: {e}"),
+            })?;
 
     let auth = resolve_auth(&reference);
 

@@ -66,12 +66,10 @@ impl ImageManager {
 
     /// Pull a QCOW2 image from an OCI registry into the cache directory.
     pub async fn pull_oci(&self, reference: &str, name: Option<&str>) -> Result<PathBuf> {
-        let file_name = name
-            .map(|n| format!("{n}.qcow2"))
-            .unwrap_or_else(|| {
-                let sanitized = reference.replace('/', "_").replace(':', "_");
-                format!("{sanitized}.qcow2")
-            });
+        let file_name = name.map(|n| format!("{n}.qcow2")).unwrap_or_else(|| {
+            let sanitized = reference.replace('/', "_").replace(':', "_");
+            format!("{sanitized}.qcow2")
+        });
         let dest = self.cache.join(&file_name);
         if dest.exists() {
             info!(reference, dest = %dest.display(), "OCI image already cached; skipping pull");
