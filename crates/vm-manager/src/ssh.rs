@@ -201,6 +201,20 @@ pub fn upload(sess: &Session, local: &Path, remote: &Path) -> Result<()> {
         detail: format!("SFTP write: {e}"),
     })?;
 
+    // Close the file handle before setting permissions
+    drop(remote_file);
+
+    // Set executable permissions (0o755)
+    let stat = ssh2::FileStat {
+        size: None,
+        uid: None,
+        gid: None,
+        perm: Some(0o755),
+        atime: None,
+        mtime: None,
+    };
+    let _ = sftp.setstat(remote, stat);
+
     Ok(())
 }
 
