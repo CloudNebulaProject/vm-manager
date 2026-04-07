@@ -1,5 +1,6 @@
 pub mod backends;
 pub mod cloudinit;
+pub mod console;
 pub mod error;
 pub mod image;
 pub mod oci;
