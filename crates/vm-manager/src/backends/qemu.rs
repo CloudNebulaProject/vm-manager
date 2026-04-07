@@ -265,16 +265,16 @@ impl Hypervisor for QemuBackend {
             }
         }
 
-        // Seed ISO (cloud-init)
+        // Seed ISO (cloud-init) — use IDE CDROM so it doesn't interfere with
+        // the root disk's virtio-blk device ordering (Ubuntu cloud images use
+        // LABEL=cloudimg-rootfs which expects the root disk as the first virtio device)
         if let Some(ref iso) = vm.seed_iso_path {
             args.extend([
                 "-drive".into(),
                 format!(
-                    "file={},format=raw,if=none,id=seed,readonly=on",
+                    "file={},format=raw,if=ide,media=cdrom,readonly=on",
                     iso.display()
                 ),
-                "-device".into(),
-                "virtio-blk-pci,drive=seed".into(),
             ]);
         }
 
