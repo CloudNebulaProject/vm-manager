@@ -30,11 +30,21 @@ impl RouterHypervisor {
     /// On illumos, creates a PropolisBackend with the given ZFS pool.
     #[allow(unused_variables)]
     pub fn new(bridge: Option<String>, zfs_pool: Option<String>) -> Self {
+        Self::with_data_dir(bridge, zfs_pool, None)
+    }
+
+    /// Build a router with a custom data directory for VM work files.
+    #[allow(unused_variables)]
+    pub fn with_data_dir(
+        bridge: Option<String>,
+        zfs_pool: Option<String>,
+        data_dir: Option<std::path::PathBuf>,
+    ) -> Self {
         #[cfg(target_os = "linux")]
         {
             RouterHypervisor {
                 noop: noop::NoopBackend,
-                qemu: Some(qemu::QemuBackend::new(None, None, bridge)),
+                qemu: Some(qemu::QemuBackend::new(None, data_dir, bridge)),
             }
         }
         #[cfg(target_os = "illumos")]
