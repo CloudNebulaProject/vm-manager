@@ -218,13 +218,17 @@ impl Hypervisor for PropolisBackend {
     }
 
     async fn suspend(&self, vm: &VmHandle) -> Result<VmHandle> {
-        info!(name = %vm.name, "Propolis: suspend (not yet implemented)");
-        Ok(vm.clone())
+        Err(VmError::InvalidState {
+            name: vm.name.clone(),
+            state: "suspend is not yet supported on the Propolis backend".into(),
+        })
     }
 
     async fn resume(&self, vm: &VmHandle) -> Result<VmHandle> {
-        info!(name = %vm.name, "Propolis: resume (not yet implemented)");
-        Ok(vm.clone())
+        Err(VmError::InvalidState {
+            name: vm.name.clone(),
+            state: "resume is not yet supported on the Propolis backend".into(),
+        })
     }
 
     async fn destroy(&self, vm: VmHandle) -> Result<()> {

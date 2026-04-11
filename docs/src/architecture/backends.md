@@ -64,7 +64,11 @@ Located in `crates/vm-manager/src/backends/propolis.rs`.
 - Manages zones with the `nebula-vm` brand.
 - Communicates with `propolis-server` via REST API.
 - Networking via illumos VNICs.
-- Suspend/resume not yet implemented.
+
+**Current limitations:**
+- Suspend/resume returns an error (not yet implemented).
+- Console tailing via WebSocket is not yet implemented (falls back to a warning).
+- Guest IP discovery for VNIC networking may require manual verification.
 
 ## Noop Backend
 

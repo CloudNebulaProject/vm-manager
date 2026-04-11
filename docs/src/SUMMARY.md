@@ -79,6 +79,7 @@
 
 - [Running in Docker/Podman](./advanced/containerization.md)
 - [TAP Networking and Bridges](./advanced/tap-networking.md)
+- [OCI Registries for VM Images](./advanced/oci-registries.md)
 - [illumos / Propolis Backend](./advanced/propolis-illumos.md)
 - [Custom Cloud-Init User Data](./advanced/custom-cloud-init.md)
 - [Debugging and Logs](./advanced/debugging.md)

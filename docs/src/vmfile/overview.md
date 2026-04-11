@@ -50,4 +50,4 @@ vmctl validates the VMFile on parse and provides detailed error messages with hi
 - Each VM must have exactly one image source (`image` or `image-url`, not both).
 - Shell provisioners must have exactly one of `inline` or `script`.
 - File provisioners must have both `source` and `destination`.
-- Network type must be `"user"`, `"tap"`, or `"none"`.
+- Network type must be `"user"`, `"tap"`, `"vnic"`, or `"none"`.

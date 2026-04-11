@@ -36,6 +36,16 @@ TAP device attached to a Linux bridge. The guest appears on the bridge's network
 
 **Default bridge:** `"br0"`
 
+### VNIC (illumos only)
+
+```kdl
+network "vnic" name="vnic0"
+```
+
+illumos VNIC for exclusive-IP zone networking. Only available on the Propolis backend.
+
+**Required attribute:** `name` — the VNIC device name.
+
 ### None
 
 ```kdl

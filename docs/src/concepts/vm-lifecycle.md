@@ -9,6 +9,7 @@ Every VM in vmctl moves through a set of well-defined states.
 | `Preparing` | Backend is allocating resources (overlay, ISO, sockets) |
 | `Prepared` | Resources allocated, ready to boot |
 | `Running` | VM is booted and executing |
+| `Suspended` | VM vCPUs are paused (memory preserved, not executing) |
 | `Stopped` | VM has been shut down (gracefully or forcibly) |
 | `Failed` | An error occurred during a lifecycle operation |
 | `Destroyed` | VM and all its resources have been cleaned up |

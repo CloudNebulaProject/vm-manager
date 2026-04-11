@@ -52,6 +52,9 @@ pub enum NetworkDef {
     Tap {
         bridge: String,
     },
+    Vnic {
+        name: String,
+    },
     None,
 }
 
@@ -281,12 +284,24 @@ fn parse_vm_def(name: &str, doc: &KdlDocument) -> Result<VmDef> {
                     .to_string();
                 NetworkDef::Tap { bridge }
             }
+            "vnic" => {
+                let vnic_name = net_node
+                    .get("name")
+                    .and_then(|v| v.as_string())
+                    .ok_or_else(|| VmError::VmFileValidation {
+                        vm: name.into(),
+                        detail: "vnic network requires a name".into(),
+                        hint: "add a name: network \"vnic\" name=\"vnic0\"".into(),
+                    })?
+                    .to_string();
+                NetworkDef::Vnic { name: vnic_name }
+            }
             "none" => NetworkDef::None,
             other => {
                 return Err(VmError::VmFileValidation {
                     vm: name.into(),
                     detail: format!("unknown network type: {other}"),
-                    hint: "use \"user\", \"tap\", or \"none\"".into(),
+                    hint: "use \"user\", \"tap\", \"vnic\", or \"none\"".into(),
                 });
             }
         }
@@ -466,6 +481,9 @@ pub async fn resolve(def: &VmDef, base_dir: &Path) -> Result<VmSpec> {
         NetworkDef::User => NetworkConfig::User,
         NetworkDef::Tap { bridge } => NetworkConfig::Tap {
             bridge: bridge.clone(),
+        },
+        NetworkDef::Vnic { name } => NetworkConfig::Vnic {
+            name: name.clone(),
         },
         NetworkDef::None => NetworkConfig::None,
     };

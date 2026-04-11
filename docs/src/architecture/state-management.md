@@ -2,7 +2,7 @@
 
 ## VM Store
 
-vmctl persists VM state in a JSON file at `$XDG_DATA_HOME/vmctl/vms.json` (typically `~/.local/share/vmctl/vms.json`). Falls back to `/tmp` if `XDG_DATA_HOME` is not set.
+vmctl persists VM state in a JSON file at `$XDG_DATA_HOME/vmctl/vms.json` (typically `~/.local/share/vmctl/vms.json`). If `XDG_DATA_HOME` is not set, the standard XDG default of `~/.local/share` is used. Falls back to `/tmp` only if the home directory cannot be determined.
 
 The store is a simple mapping from VM name to `VmHandle`.
 

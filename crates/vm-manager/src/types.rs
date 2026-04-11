@@ -133,6 +133,8 @@ pub enum VmState {
     Prepared,
     /// VM is running.
     Running,
+    /// VM vCPUs are paused (suspend/resume).
+    Suspended,
     /// VM has been stopped (gracefully or forcibly).
     Stopped,
     /// VM encountered an error.
@@ -147,6 +149,7 @@ impl std::fmt::Display for VmState {
             Self::Preparing => write!(f, "preparing"),
             Self::Prepared => write!(f, "prepared"),
             Self::Running => write!(f, "running"),
+            Self::Suspended => write!(f, "suspended"),
             Self::Stopped => write!(f, "stopped"),
             Self::Failed => write!(f, "failed"),
             Self::Destroyed => write!(f, "destroyed"),

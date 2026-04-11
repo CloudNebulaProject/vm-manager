@@ -435,7 +435,7 @@ impl Hypervisor for QemuBackend {
                         if let Ok(status) = qmp.query_status().await {
                             return Ok(match status.as_str() {
                                 "running" => VmState::Running,
-                                "paused" | "suspended" => VmState::Stopped,
+                                "paused" | "suspended" => VmState::Suspended,
                                 _ => VmState::Running,
                             });
                         }
