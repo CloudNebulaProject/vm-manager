@@ -32,6 +32,7 @@ oci-client.workspace = true
 
 # SSH
 ssh2 = "0.9"
+openssl = { version = "0.10", features = ["vendored"] }
 ssh-key.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
