@@ -45,6 +45,10 @@ pub struct CreateArgs {
     #[arg(long)]
     ssh_key: Option<PathBuf>,
 
+    /// Boot with UEFI firmware (OVMF) instead of legacy BIOS
+    #[arg(long)]
+    uefi: bool,
+
     /// Also start the VM after creation
     #[arg(long)]
     start: bool,
@@ -157,6 +161,7 @@ pub async fn run(args: CreateArgs) -> Result<()> {
         network,
         cloud_init,
         ssh,
+        uefi: args.uefi,
     };
 
     let hv = RouterHypervisor::new(None, None);

@@ -31,6 +31,10 @@ pub struct VmSpec {
     pub network: NetworkConfig,
     pub cloud_init: Option<CloudInitConfig>,
     pub ssh: Option<SshConfig>,
+    /// Boot with UEFI firmware (OVMF). When true, QEMU is launched with
+    /// pflash drives for OVMF_CODE and a per-VM copy of OVMF_VARS.
+    /// Default: false (legacy BIOS boot).
+    pub uefi: bool,
 }
 
 /// Network configuration for a VM.
@@ -113,6 +117,9 @@ pub struct VmHandle {
     /// MAC address assigned to this VM.
     #[serde(default)]
     pub mac_addr: Option<String>,
+    /// Boot with UEFI firmware.
+    #[serde(default)]
+    pub uefi: bool,
 }
 
 fn default_vcpus() -> u16 {

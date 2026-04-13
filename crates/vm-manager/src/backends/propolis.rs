@@ -139,6 +139,7 @@ impl Hypervisor for PropolisBackend {
             network: spec.network.clone(),
             ssh_host_port: None,
             mac_addr: None,
+            uefi: false,
         };
 
         info!(name = %spec.name, id = %handle.id, "Propolis: prepared");

@@ -500,6 +500,7 @@ pub async fn resolve(def: &VmDef, base_dir: &Path) -> Result<VmSpec> {
         network,
         cloud_init,
         ssh,
+        uefi: false,
     })
 }
 

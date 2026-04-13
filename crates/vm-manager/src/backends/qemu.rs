@@ -135,6 +135,19 @@ impl Hypervisor for QemuBackend {
             _ => None,
         };
 
+        // Copy OVMF_VARS to the VM's work directory when UEFI is requested
+        if spec.uefi {
+            if let Some(ovmf_vars) = find_ovmf_vars() {
+                let vars_dest = work_dir.join("efivars.fd");
+                tokio::fs::copy(&ovmf_vars, &vars_dest)
+                    .await
+                    .map_err(|e| VmError::InvalidState {
+                        name: spec.name.clone(),
+                        state: format!("failed to copy OVMF_VARS: {e}"),
+                    })?;
+            }
+        }
+
         let handle = VmHandle {
             id: format!("qemu-{}", uuid::Uuid::new_v4()),
             name: spec.name.clone(),
@@ -152,6 +165,7 @@ impl Hypervisor for QemuBackend {
             network: spec.network.clone(),
             ssh_host_port,
             mac_addr: Some(mac_addr),
+            uefi: spec.uefi,
         };
 
         info!(
@@ -240,6 +254,24 @@ impl Hypervisor for QemuBackend {
             "-device".into(),
             "virtio-blk-pci,drive=drive0".into(),
         ];
+
+        // UEFI firmware (OVMF pflash drives)
+        if vm.uefi {
+            if let Some(ovmf_code) = find_ovmf_code() {
+                let efivars = vm.work_dir.join("efivars.fd");
+                args.extend([
+                    "-drive".into(),
+                    format!(
+                        "if=pflash,format=raw,readonly=on,file={}",
+                        ovmf_code.display()
+                    ),
+                    "-drive".into(),
+                    format!("if=pflash,format=raw,file={}", efivars.display()),
+                ]);
+            } else {
+                warn!("UEFI requested but OVMF firmware not found — falling back to BIOS boot");
+            }
+        }
 
         // Networking
         match &vm.network {
@@ -530,4 +562,29 @@ impl Hypervisor for QemuBackend {
             None => Ok(ConsoleEndpoint::None),
         }
     }
+}
+
+/// Search common paths for the OVMF_CODE firmware file.
+fn find_ovmf_code() -> Option<PathBuf> {
+    let candidates = [
+        "/usr/share/OVMF/OVMF_CODE.fd",
+        "/usr/share/OVMF/OVMF_CODE_4M.fd",
+        "/usr/share/ovmf/OVMF_CODE.fd",
+        "/usr/share/qemu/efi-virtio.rom",
+        "/usr/share/edk2/ovmf/OVMF_CODE.fd",
+        "/usr/share/edk2-ovmf/x64/OVMF_CODE.fd",
+    ];
+    candidates.iter().map(PathBuf::from).find(|p| p.exists())
+}
+
+/// Search common paths for the OVMF_VARS template file.
+fn find_ovmf_vars() -> Option<PathBuf> {
+    let candidates = [
+        "/usr/share/OVMF/OVMF_VARS.fd",
+        "/usr/share/OVMF/OVMF_VARS_4M.fd",
+        "/usr/share/ovmf/OVMF_VARS.fd",
+        "/usr/share/edk2/ovmf/OVMF_VARS.fd",
+        "/usr/share/edk2-ovmf/x64/OVMF_VARS.fd",
+    ];
+    candidates.iter().map(PathBuf::from).find(|p| p.exists())
 }
