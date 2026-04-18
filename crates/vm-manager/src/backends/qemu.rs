@@ -239,9 +239,13 @@ impl Hypervisor for QemuBackend {
             ),
             "-serial".into(),
             "chardev:serial0".into(),
-            // VNC on localhost with auto-port
+            // VNC on localhost, auto-select a free display.
+            // `127.0.0.1:0,to=99` tells QEMU to try display 0 (TCP 5900) and
+            // fall back through 5901..=5999 if occupied. Without `to=`, QEMU
+            // binds display 0 exactly and the second concurrent VM fails with
+            // "Address already in use".
             "-vnc".into(),
-            "127.0.0.1:0".into(),
+            "127.0.0.1:0,to=99".into(),
             // Virtio RNG
             "-device".into(),
             "virtio-rng-pci".into(),
