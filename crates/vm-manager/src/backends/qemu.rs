@@ -67,14 +67,27 @@ impl QemuBackend {
         unsafe { libc::kill(pid as i32, 0) == 0 }
     }
 
-    /// Derive a deterministic SSH host port from the VM name (range 10022..10122).
-    fn ssh_port_for_name(name: &str) -> u16 {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-        let mut hasher = DefaultHasher::new();
-        name.hash(&mut hasher);
-        let h = hasher.finish();
-        10022 + (h % 100) as u16
+    /// Pick a free TCP host port for SSH forwarding.
+    ///
+    /// Previously this hashed the VM name into a 100-port range
+    /// (10022..10121). With N concurrent VMs the birthday-paradox collision
+    /// probability there is ≈ N*(N-1)/200, so 8 concurrent jobs collide
+    /// ~28% of the time and QEMU exits with
+    ///   "Could not set up host forwarding rule 'tcp::PORT-:22'".
+    ///
+    /// Replace with: bind to an OS-assigned ephemeral port, read the bound
+    /// port back, close the listener, and hand that port to QEMU. There is
+    /// a tiny race between close and QEMU's bind, but in practice QEMU
+    /// binds within milliseconds and the OS won't immediately reuse the
+    /// port for anyone else. `name` is unused now but kept in the signature
+    /// to minimise the diff at call sites.
+    fn ssh_port_for_name(_name: &str) -> u16 {
+        use std::net::TcpListener;
+        // 0 = let the OS pick any free ephemeral port on loopback.
+        match TcpListener::bind("127.0.0.1:0").and_then(|l| l.local_addr()) {
+            Ok(addr) => addr.port(),
+            Err(_) => 10022, // last-resort fallback; better than panic
+        }
     }
 }
 
